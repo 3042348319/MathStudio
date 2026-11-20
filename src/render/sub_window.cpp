@@ -1360,9 +1360,19 @@ struct SubWindow::Impl {
         const std::filesystem::path& path) const {
         std::string text = path.u8string();
         std::replace(text.begin(), text.end(), '\\', '/');
-        const bool isStatic =
-            text.find("/src/plugins/") != std::string::npos;
-        return editorStaticMode ? isStatic : !isStatic;
+        const std::filesystem::path normalized = path.lexically_normal();
+        text = normalized.u8string();
+        std::replace(text.begin(), text.end(), '\\', '/');
+
+        // 先判断 dynamic_plugins, 避免
+        // src/plugins/../dynamic_plugins/... 被误判为静态插件。
+        if (text.find("/src/dynamic_plugins/") != std::string::npos) {
+            return !editorStaticMode;
+        }
+        if (text.find("/src/plugins/") != std::string::npos) {
+            return editorStaticMode;
+        }
+        return !editorStaticMode;
     }
 
     /** 切换模式后保证活动标签属于当前模式 */

@@ -8,25 +8,74 @@
 #include <fstream>
 #include <sstream>
 
-std::filesystem::path findProjectRoot() {
-    std::error_code error;
-    std::filesystem::path current =
-        std::filesystem::current_path(error);
-    if (error) {
-        return std::filesystem::path();
-    }
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
-    for (int depth = 0; depth < 8; ++depth) {
-        if (std::filesystem::exists(
-                current / "src" / "plugins", error)) {
-            return current;
+namespace {
+
+/**
+ * 从 start 开始向上寻找包含 src/plugins 的项目根目录。
+ * 不依赖程序工作目录, 因此从快捷方式或其它目录启动也能找到源码。
+ */
+std::filesystem::path findRootUpwards(std::filesystem::path start) {
+    std::error_code error;
+    for (int depth = 0; depth < 12; ++depth) {
+        if (std::filesystem::exists(start / "src" / "plugins",
+                                    error)) {
+            return start;
         }
 
-        const std::filesystem::path parent = current.parent_path();
-        if (parent == current) {
+        const std::filesystem::path parent = start.parent_path();
+        if (parent.empty() || parent == start) {
             break;
         }
-        current = parent;
+        start = parent;
+    }
+    return std::filesystem::path();
+}
+
+std::filesystem::path executableDirectory() {
+#ifdef _WIN32
+    std::wstring buffer(MAX_PATH, L'\0');
+    for (;;) {
+        const DWORD length = GetModuleFileNameW(
+            nullptr, buffer.data(),
+            static_cast<DWORD>(buffer.size()));
+        if (length == 0) {
+            return std::filesystem::path();
+        }
+        if (length < buffer.size() - 1) {
+            buffer.resize(length);
+            return std::filesystem::path(buffer).parent_path();
+        }
+        buffer.resize(buffer.size() * 2);
+    }
+#else
+    return std::filesystem::path();
+#endif
+}
+
+}  // namespace
+
+std::filesystem::path findProjectRoot() {
+    std::error_code error;
+    const std::filesystem::path current =
+        std::filesystem::current_path(error);
+    if (!error) {
+        const std::filesystem::path root =
+            findRootUpwards(current);
+        if (!root.empty()) {
+            return root;
+        }
+    }
+
+    // 从快捷方式启动时当前目录可能是桌面或 System32,
+    // 此时用 exe 所在目录再找一次。
+    const std::filesystem::path executable =
+        executableDirectory();
+    if (!executable.empty()) {
+        return findRootUpwards(executable);
     }
     return std::filesystem::path();
 }
@@ -58,10 +107,58 @@ std::filesystem::path pluginSourceFile(const std::string& pluginType) {
     }();
 
     const std::filesystem::path root = findProjectRoot();
-    if (fileName.empty() || root.empty()) {
+    if (root.empty()) {
         return std::filesystem::path();
     }
-    return root / "src" / "plugins" / fileName;
+
+    if (!fileName.empty()) {
+        const std::filesystem::path mapped =
+            (root / "src" / "plugins" / fileName)
+                .lexically_normal();
+        if (std::filesystem::exists(mapped)) {
+            return mapped;
+        }
+    }
+
+    // 没有显式映射的第三方动态插件: 在源码目录中按类型名查找。
+    // 生成的静态/动态模板都会包含:
+    //   kTypeName = "Type"
+    // 或 registerStaticPlugin("Type", ...)
+    for (const char* directory : {"plugins", "dynamic_plugins"}) {
+        const std::filesystem::path dir =
+            root / "src" / directory;
+        std::error_code error;
+        for (std::filesystem::directory_iterator it(dir, error), end;
+             !error && it != end; it.increment(error)) {
+            if (!it->is_regular_file()) {
+                continue;
+            }
+            const std::filesystem::path candidate = it->path();
+            const std::string extension =
+                candidate.extension().u8string();
+            if (extension != ".cpp" && extension != ".h") {
+                continue;
+            }
+            std::string text;
+            std::string readError;
+            if (!readTextFile(candidate, text, readError)) {
+                continue;
+            }
+            if (text.find("\"" + pluginType + "\"") ==
+                std::string::npos) {
+                continue;
+            }
+            if (text.find("kTypeName") != std::string::npos ||
+                text.find("registerStaticPlugin") !=
+                    std::string::npos ||
+                text.find("class " + pluginType) !=
+                    std::string::npos) {
+                return candidate;
+            }
+        }
+    }
+
+    return std::filesystem::path();
 }
 
 bool readTextFile(const std::filesystem::path& path,
