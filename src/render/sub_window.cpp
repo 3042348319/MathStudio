@@ -2092,6 +2092,30 @@ struct SubWindow::Impl {
             if (ImGui::Button("编译静态插件")) {
                 compileStaticPlugin();
             }
+
+            ImGui::SameLine();
+            Object* selectedTarget = nullptr;
+            if (selectedObject >= 0 &&
+                selectedObject <
+                    static_cast<int>(owner->objects_.size())) {
+                selectedTarget = owner->objects_[static_cast<std::size_t>(
+                    selectedObject)]
+                                     .get();
+            }
+            if (ImGui::Button("→ 应用到当前 Object") &&
+                selectedTarget != nullptr) {
+                const std::string className =
+                    sanitizeIdentifier(newPluginClass);
+                std::unique_ptr<Plugin> compiled =
+                    createPluginByType(className);
+                if (compiled) {
+                    selectedTarget->addPlugin(std::move(compiled));
+                    markProjectDirty();
+                    editorStatus = "插件已应用";
+                } else {
+                    editorStatus = "当前程序中没有这个静态插件";
+                }
+            }
         } else {
             if (ImGui::Button("＋ 创建动态插件")) {
                 requestCreate(PendingCreate::DynamicPlugin);
