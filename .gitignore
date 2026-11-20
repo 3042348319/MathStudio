@@ -1,0 +1,30 @@
+# 构建产物
+/build/
+/build_static/
+/build-*/
+/out/
+/.vs/
+/CMakeFiles/
+CMakeCache.txt
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.user
+
+# 运行产物
+/plugins/
+/projects/
+/MathStudio*.exe
+/VulkanTutorial.exe
+/MathStudio_next.exe
+/MathStudio_pending.exe
+/apply_mathstudio_update.bat
+*.log
+*.zip
+
+# 临时文件
+*.tmp
+*.bak
+Thumbs.db
+.DS_Store
