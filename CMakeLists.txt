@@ -205,6 +205,29 @@ add_custom_command(TARGET EntityDemoPlugin POST_BUILD
 add_dependencies(${PROJECT_NAME} EntityDemoPlugin)
 
 # --------------------------------------------------------------------
+# 传递函数极坐标曲线动态插件
+# --------------------------------------------------------------------
+add_library(TransferFunctionPlugin SHARED
+    "${SRC_DIR}/dynamic_plugins/transfer_function_plugin.cpp"
+    "${SRC_DIR}/plugins/plugin_api.h"
+)
+target_include_directories(TransferFunctionPlugin PRIVATE
+    "${SRC_DIR}/plugins"
+)
+if(MSVC)
+    target_compile_options(TransferFunctionPlugin PRIVATE /utf-8)
+endif()
+add_custom_command(TARGET TransferFunctionPlugin POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/plugins"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "$<TARGET_FILE:TransferFunctionPlugin>"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/plugins/TransferFunctionPlugin.dll"
+    COMMENT "复制 TransferFunctionPlugin.dll 到 plugins/"
+)
+add_dependencies(${PROJECT_NAME} TransferFunctionPlugin)
+
+# --------------------------------------------------------------------
 # 编辑器“编译并加载”使用的动态插件目标。
 #
 # 这个目标不随主程序默认构建 (EXCLUDE_FROM_ALL), 只有用户在

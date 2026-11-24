@@ -97,6 +97,9 @@ std::filesystem::path pluginSourceFile(const std::string& pluginType) {
         if (pluginType == "EntityDemoPlugin") {
             return "../dynamic_plugins/entity_demo_plugin.cpp";
         }
+        if (pluginType == "TransferFunctionPlugin") {
+            return "../dynamic_plugins/transfer_function_plugin.cpp";
+        }
         if (pluginType == "CoordinateSystemPlugin") {
             return "coordinate_system_plugin.cpp";
         }

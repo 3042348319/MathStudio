@@ -643,6 +643,63 @@ EntityDemoPlugin
     4 个可调参数
 ```
 
+### 6.3.1 传递函数极坐标示例
+
+`TransferFunctionPlugin` 让一个对象沿传递函数的极坐标曲线运动，
+并同时绘制整条曲线。
+
+传递函数：
+
+```text
+             b0 + b1*s
+G(s) = ---------------------
+        a0 + a1*s + a2*s^2
+```
+
+令：
+
+```text
+s = j*w
+Re = Re(G(jw))
+Im = Im(G(jw))
+r  = |G(jw)|
+θ  = arg(G(jw))
+```
+
+世界坐标：
+
+```text
+X = origin.x + r*cos(θ)*scale
+Y = origin.y
+Z = origin.z + r*sin(θ)*scale
+```
+
+因此曲线显示在 X-Z 平面。
+
+在 Object 菜单中打开：
+
+```text
+Object → 传递函数极坐标
+```
+
+参数面板：
+
+```text
+b0
+b1
+a0
+a1
+a2
+频率上限
+动画速度
+曲线缩放
+```
+
+插件每帧绘制：
+
+- 128 个半透明曲线采样点；
+- 1 个橙色运动标记实体。
+
 ### 6.4 参数
 
 插件实现：

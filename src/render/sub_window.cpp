@@ -2422,6 +2422,33 @@ struct SubWindow::Impl {
         }
     }
 
+    /** 菜单 Object > 传递函数极坐标 */
+    void addTransferFunctionCube() {
+        try {
+            std::unique_ptr<Plugin> plugin =
+                DynamicPluginManager::instance().create(
+                    "TransferFunctionPlugin");
+            if (!plugin) {
+                importStatus = "TransferFunctionPlugin.dll not loaded";
+                return;
+            }
+
+            Mesh mesh = Mesh::loadFromResource("cube.mesh");
+            Object& object = owner->addObject<Object>(
+                std::move(mesh), glm::vec3(0.0f),
+                glm::vec4(0.72f, 0.90f, 0.95f, 1.0f),
+                "传递函数极坐标");
+            object.addPlugin(std::move(plugin));
+
+            selectedObject =
+                static_cast<int>(owner->objectCount()) - 1;
+            hasSelection = true;
+            panelScrollToTop = true;
+        } catch (const std::exception& error) {
+            importStatus = error.what();
+        }
+    }
+
     /** 菜单 Object > 动态波浪立方体 */
     void addDynamicWaveCube() {
         try {
@@ -2524,6 +2551,9 @@ struct SubWindow::Impl {
                 }
                 if (ImGui::MenuItem("动态实体演示")) {
                     addEntityDemoCube();
+                }
+                if (ImGui::MenuItem("传递函数极坐标")) {
+                    addTransferFunctionCube();
                 }
                 ImGui::EndMenu();
             }
